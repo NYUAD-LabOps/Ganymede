@@ -1,9 +1,10 @@
 #include <Ganymede.h>
-
+static UX_SLAVE_CLASS_CDC_ACM *g_cdc;
 
 ///Ethernet initialization requires some elements to be declared in advance, and passed to the initialization function as pointers. This includes
 /// the NX_IP and NX_UDP_SOCKET objects, and the callback receive function.
-UINT EthernetUDPInit(NX_IP *ip, NX_UDP_SOCKET *udp_sck, UINT port, VOID(*udp_receive_notify)(NX_UDP_SOCKET *socket_ptr))
+UINT EthernetUDPInit(NX_IP *ip, NX_UDP_SOCKET *udp_sck, UINT port,
+        VOID (*udp_receive_notify)(NX_UDP_SOCKET *socket_ptr))
 {
     UINT status;
     ULONG link_status;
@@ -24,11 +25,9 @@ UINT EthernetUDPInit(NX_IP *ip, NX_UDP_SOCKET *udp_sck, UINT port, VOID(*udp_rec
 //    {
 //        printf ("\nIP initialization complete. IP:%s", IPADDSTRING);
 //    }
-
-    //    status = nx_udp_socket_create(&g_ip0, &machineGlobalsBlock->g_udp_sck, "UDP Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE,
-    //                                  512);
-    status = nx_udp_socket_create(ip, udp_sck, "UDP Socket", NX_IP_NORMAL, NX_DONT_FRAGMENT,
-                                  NX_IP_TIME_TO_LIVE, 512);
+//    status = nx_udp_socket_create(&g_ip0, &machineGlobalsBlock->g_udp_sck, "UDP Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE,
+//                                  512);
+    status = nx_udp_socket_create(ip, udp_sck, "UDP Socket", NX_IP_NORMAL, NX_DONT_FRAGMENT, NX_IP_TIME_TO_LIVE, 512);
 //    if (DEBUG)
 //    {
 //        if (NX_SUCCESS != status)
@@ -171,4 +170,57 @@ UINT EthernetSecondarySend(char *data, unsigned int length, NX_UDP_SOCKET *udp_s
 //        }
 //    }
     return status;
+}
+
+UINT USBDeviceRead(UX_SLAVE_CLASS_CDC_ACM *g_cdc, char *rxBuff, UINT length, UINT *actual_length)
+{
+    UINT status;
+//    memset (machineGlobalsBlock->USBBufferB, 0, 49);
+    status = _ux_device_class_cdc_acm_read (g_cdc, rxBuff, length, actual_length);
+    if (status == UX_SUCCESS)
+    {
+//                    if(DEBUG) printf ("\nDevice received...");
+        //printf(topic_buffer);
+////                    if(DEBUG) printf (machineGlobalsBlock->USBBufferB);
+//        if (machineGlobalsBlock->USBBufferB[0] == 'U' && machineGlobalsBlock->USBBufferB[1] == 'S'
+//                && machineGlobalsBlock->USBBufferB[2] == 'B')
+//        {
+//            status = _ux_device_class_cdc_acm_write (g_cdc, (UCHAR *) "USB", 4, &actual_length);
+//        }
+//        else if (machineGlobalsBlock->USBBufferB[0] == 'T' && machineGlobalsBlock->USBBufferB[1] == 'M'
+//                && machineGlobalsBlock->USBBufferB[2] == 'P')
+//        {
+//            char tmpUSBOut[12];
+//            memset (tmpUSBOut, 0, 12);
+//            tmpUSBOut[0] = 'T';
+//            tmpUSBOut[1] = 'M';
+//            tmpUSBOut[2] = 'P';
+//
+//            snprintf (tmpUSBOut + 3, 8, "%f", toolBlockA->tempRead);
+//            status = _ux_device_class_cdc_acm_write (g_cdc, (UCHAR *) tmpUSBOut, 12, &actual_length);
+//        }
+//        else
+//        {
+//            processReceivedMsg (machineGlobalsBlock->USBBufferB);
+//        }
+    }
+    else
+    {
+
+    }
+    return status;
+}
+
+void ux_cdc_device0_instance_activate(VOID *cdc_instance)
+{
+    /* Save the CDC instance.  */
+    g_cdc = (UX_SLAVE_CLASS_CDC_ACM *) cdc_instance;
+    tx_semaphore_put (&g_cdc_activate_semaphore);
+}
+
+void ux_cdc_device0_instance_deactivate(VOID *cdc_instance)
+{
+    SSP_PARAMETER_NOT_USED(cdc_instance);
+
+    g_cdc = UX_NULL;
 }
