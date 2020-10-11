@@ -224,3 +224,62 @@ void ux_cdc_device0_instance_deactivate(VOID *cdc_instance)
 
     g_cdc = UX_NULL;
 }
+
+//callback function for USB_MSC_HOST
+UINT usb_host_plug_event_notification(ULONG usb_event, UX_HOST_CLASS *host_class, VOID *instance)
+{
+    /* variable to hold the UX calls return values */
+    UINT ux_return;
+
+    UX_HOST_CLASS_STORAGE_MEDIA *p_ux_host_class_storage_media;
+
+    // Check if host_class is for Mass Storage class.
+    if (UX_SUCCESS
+            == _ux_utility_memory_compare (_ux_system_host_class_storage_name, host_class,
+                                           _ux_utility_string_length_get (_ux_system_host_class_storage_name)))
+    {
+        // Get the pointer to the media
+        ux_return = ux_system_host_storage_fx_media_get (instance, &p_ux_host_class_storage_media, &g_fx_media0_ptr);
+
+        if (ux_return != UX_SUCCESS)
+        {
+            /* This is a fairly simple error handling - it holds the
+             application execution. In a more realistic scenarios
+             a more robust and complex error handling solution should
+             be provided. */
+#ifdef SEMI_HOSTING
+            if (DEBUGGER)
+            {
+                if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
+                {
+                    /* Debugger is connected */
+                    /* Call this before any calls to printf() */
+                    printf ("Could not get the pointer to the media, error:%d\n", ux_return);
+                }
+            }
+#endif
+//                   tx_thread_sleep(TX_WAIT_FOREVER);
+        }
+        else
+        {
+            //Check the usb_event type
+            switch (usb_event)
+            {
+                case EVENT_USB_PLUG_IN:
+                    // Notify the insertion of a USB Mass Storage device.
+                    tx_event_flags_set (&g_usb_plug_events, EVENT_USB_PLUG_IN, TX_OR);
+//                    machineGlobalsBlock->USBPlugIn = 1;
+                break;
+                case EVENT_USB_PLUG_OUT:
+                    // Notify the removal of a USB Mass Storage device.
+                    tx_event_flags_set (&g_usb_plug_events, EVENT_USB_PLUG_OUT, TX_OR);
+//                    machineGlobalsBlock->USBPlugIn = 0;
+                break;
+                default:
+                    //ignore this unsupported event
+                break;
+            }
+        }
+    }
+    return UX_SUCCESS;
+}
